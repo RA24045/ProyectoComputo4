@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adivina el País</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        oscuro: {
+                            fondo: '#1a202c',
+                            texto: '#e2e8f0',
+                        },
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-gray-100 dark:bg-oscuro-fondo text-gray-900 dark:text-oscuro-texto min-h-screen flex items-center justify-center transition-colors duration-300">
+    <div id="contenedor-juego" class="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md max-w-md w-full">
+        <!-- Enlace a la página de información de países -->
+        <div class="mb-4">
+            <a href="InformacionDePaises.html" class="text-blue-500 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-500 text-sm font-semibold">
+                Aprende mas sobre geografia haciendo clik aqui!!
+            </a>
+        </div>
+        
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-2xl font-bold text-center">Adivina el País</h1>
+            <button id="alternar-modo-oscuro" class="p-2 rounded-full bg-gray-200 dark:bg-gray-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+            </button>
+        </div>
+        
+        <div id="contenedor-bandera" class="mb-4 h-40 bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden rounded">
+            <img id="bandera" src="" alt="Bandera del país" class="max-w-full max-h-full object-cover opacity-0 transition-all duration-500">
+        </div>
+        
+        <div id="contenedor-informacion" class="mb-4"></div>
+        <div id="contenedor-pista" class="mb-4 text-center font-bold"></div>
+        <div id="contenedor-intentos" class="mb-4 text-center font-bold"></div>
+        
+        <input type="text" id="entrada-adivinanza" placeholder="Ingresa el nombre del país" class="w-full p-2 border rounded mb-4 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+        
+        <button id="enviar-adivinanza" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition-colors duration-300">Adivinar</button>
+        <button id="nuevo-juego" class="w-full mt-4 bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors duration-300 hidden">Nuevo Juego</button>
+    </div>
+
+    <script>
+        const URL_API = 'https://restcountries.com/v3.1/all';
+        let paisActual;
+        let intentos;
+        let informacionRevelada;
+
+        const ordenInformacion = ['region', 'subregion', 'capital', 'population', 'languages', 'currencies', 'name'];
+        const etiquetasInformacion = {
+            region: 'Región',
+            subregion: 'Subregión',
+            capital: 'Capital',
+            population: 'Población',
+            languages: 'Idiomas',
+            currencies: 'Monedas',
+            name: 'Nombre'
+        };
+
+        async function obtenerPaises() {
+            const respuesta = await fetch(URL_API);
+            return await respuesta.json();
+        }
+
+        function obtenerPaisAleatorio(paises) {
+            return paises[Math.floor(Math.random() * paises.length)];
+        }
+
+        function iniciarNuevoJuego() {
+            obtenerPaises().then(paises => {
+                paisActual = obtenerPaisAleatorio(paises);
+                intentos = Object.keys(etiquetasInformacion).length;
+                informacionRevelada = 0;
+                actualizarInterfaz();
+                mostrarPistaInicial();
+            });
+        }
+
+        function actualizarInterfaz() {
+            const contenedorInformacion = document.getElementById('contenedor-informacion');
+            const contenedorIntentos = document.getElementById('contenedor-intentos');
+            const imagenBandera = document.getElementById('bandera');
+            const entradaAdivinanza = document.getElementById('entrada-adivinanza');
+            const botonEnviar = document.getElementById('enviar-adivinanza');
+            const botonNuevoJuego = document.getElementById('nuevo-juego');
+
+            contenedorInformacion.innerHTML = '';
+            for (let i = 0; i < informacionRevelada; i++) {
+                const info = ordenInformacion[i];
+                let valor = paisActual[info];
+                if (info === 'languages') {
+                    valor = Object.values(valor).join(', ');
+                } else if (info === 'currencies') {
+                    valor = Object.values(valor).map(c => c.name).join(', ');
+                } else if (info === 'population') {
+                    valor = valor.toLocaleString();
+                } else if (Array.isArray(valor)) {
+                    valor = valor.join(', ');
+                } else if (info === 'name') {
+                    valor = paisActual.translations.spa.common;
+                }
+                const p = document.createElement('p');
+                p.innerHTML = `<strong>${etiquetasInformacion[info]}:</strong> ${valor}`;
+                p.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+                contenedorInformacion.appendChild(p);
+                setTimeout(() => p.classList.remove('opacity-0'), 50);
+            }
+
+            contenedorIntentos.textContent = `Intentos restantes: ${intentos}`;
+
+            imagenBandera.style.clipPath = `inset(0 ${100 - (informacionRevelada / ordenInformacion.length) * 100}% 0 0)`;
+            imagenBandera.style.opacity = '1';
+            imagenBandera.src = paisActual.flags.svg;
+
+            if (informacionRevelada >= ordenInformacion.length || intentos <= 0) {
+                entradaAdivinanza.disabled = true;
+                botonEnviar.disabled = true;
+                botonNuevoJuego.classList.remove('hidden');
+                const pResultado = document.createElement('p');
+                pResultado.textContent = `¡Juego terminado! El país era ${paisActual.translations.spa.common}.`;
+                pResultado.classList.add('font-bold', 'mt-4', 'opacity-0', 'transition-opacity', 'duration-500');
+                contenedorInformacion.appendChild(pResultado);
+                setTimeout(() => pResultado.classList.remove('opacity-0'), 50);
+            } else {
+                entradaAdivinanza.disabled = false;
+                botonEnviar.disabled = false;
+                botonNuevoJuego.classList.add('hidden');
+            }
+        }
+
+        function mostrarPistaInicial() {
+            const contenedorPista = document.getElementById('contenedor-pista');
+            const primeraLetra = paisActual.translations.spa.common.charAt(0).toUpperCase();
+            contenedorPista.textContent = `Pista: El nombre del país comienza con la letra "${primeraLetra}"`;
+        }
+
+        function verificarAdivinanza() {
+            const entradaAdivinanza = document.getElementById('entrada-adivinanza');
+            const adivinanza = entradaAdivinanza.value.trim().toLowerCase();
+            const nombreCorrecto = paisActual.translations.spa.common.toLowerCase();
+
+            if (adivinanza === nombreCorrecto) {
+                informacionRevelada = ordenInformacion.length;
+            } else {
+                intentos--;
+                informacionRevelada++;
+            }
+
+            entradaAdivinanza.value = '';
+            actualizarInterfaz();
+        }
+
+        document.getElementById('enviar-adivinanza').addEventListener('click', verificarAdivinanza);
+        document.getElementById('nuevo-juego').addEventListener('click', iniciarNuevoJuego);
+        document.getElementById('entrada-adivinanza').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                verificarAdivinanza();
+            }
+        });
+
+        document.getElementById('alternar-modo-oscuro').addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+        });
+
+        iniciarNuevoJuego();
+    </script>
+</body>
+</html>
