@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Busca un País</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body
+    class="min-h-screen bg-gray-100 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8"
+  >
+    <div class="max-w-lg mx-auto">
+      <h1
+        class="text-3xl font-extrabold text-center text-gray-900 dark:text-white mb-6"
+      >
+        Busca un país
+      </h1>
+      <form id="formularioBusqueda" class="mb-6">
+        <div class="flex gap-2">
+          <input
+            type="text"
+            id="entradaPais"
+            placeholder="Introduce el nombre del país en español"
+            aria-label="Nombre del país"
+            class="flex-grow px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          />
+          <button
+            type="submit"
+            class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-600 dark:hover:bg-blue-700"
+          >
+            <span id="textoBotonBusqueda">Buscar</span>
+          </button>
+        </div>
+      </form>
+
+      <p
+        id="mensajeError"
+        class="text-red-500 dark:text-red-400 text-center mb-4 hidden"
+      ></p>
+
+      <div
+        id="informacionPais"
+        class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hidden"
+      >
+        <div class="p-6">
+          <h2
+            id="nombrePais"
+            class="text-2xl font-bold mb-4 text-gray-900 dark:text-white"
+          ></h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <img
+                id="banderaPais"
+                src=""
+                alt=""
+                class="w-full h-auto rounded-md mb-4"
+              />
+            </div>
+            <div class="space-y-2 text-gray-700 dark:text-gray-300">
+              <p>
+                <strong>Nombre Oficial:</strong> <span id="nombreOficial"></span>
+              </p>
+              <p><strong>Capital:</strong> <span id="capital"></span></p>
+              <p><strong>Población:</strong> <span id="poblacion"></span></p>
+              <p><strong>Área:</strong> <span id="area"></span></p>
+              <p><strong>Región:</strong> <span id="region"></span></p>
+              <p><strong>Idiomas:</strong> <span id="idiomas"></span></p>
+              <p><strong>Monedas:</strong> <span id="monedas"></span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mb-4">
+        <a href="encuentraElPais.html" class="text-blue-500 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-500 text-sm font-semibold">
+            Quieres probar que tanto sabes de geografia ? <br>
+            Haz click Aqui y desafia tus conocimientos ---
+        </a>
+    </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const formularioBusqueda = document.getElementById("formularioBusqueda");
+        const entradaPais = document.getElementById("entradaPais");
+        const textoBotonBusqueda = document.getElementById("textoBotonBusqueda");
+        const mensajeError = document.getElementById("mensajeError");
+        const informacionPais = document.getElementById("informacionPais");
+
+        formularioBusqueda.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const pais = entradaPais.value.trim();
+          if (!pais) return;
+
+          textoBotonBusqueda.textContent = "Buscando...";
+          mensajeError.classList.add("hidden");
+          informacionPais.classList.add("hidden");
+
+          try {
+            // Intenta buscar primero por el nombre en español
+            let response = await fetch(
+              `https://restcountries.com/v3.1/translation/${encodeURIComponent(pais)}`
+            );
+            
+            // Si no encuentra resultados, intenta buscar por el nombre en inglés
+            if (!response.ok) {
+              response = await fetch(
+                `https://restcountries.com/v3.1/name/${encodeURIComponent(pais)}`
+              );
+            }
+            
+            if (!response.ok) throw new Error("País no encontrado");
+            const data = await response.json();
+            mostrarInformacionPais(data[0]);
+          } catch (err) {
+            mensajeError.textContent =
+              "No se pudo obtener la información del país. Intenta nuevamente.";
+            mensajeError.classList.remove("hidden");
+          } finally {
+            textoBotonBusqueda.textContent = "Buscar";
+          }
+        });
+
+        function mostrarInformacionPais(pais) {
+          document.getElementById("nombrePais").textContent = pais.translations.spa?.common || pais.name.common;
+          document.getElementById("banderaPais").src = pais.flags.png;
+          document.getElementById("banderaPais").alt = pais.flags.alt || `Bandera de ${pais.translations.spa?.common || pais.name.common}`;
+          document.getElementById("nombreOficial").textContent = pais.translations.spa?.official || pais.name.official;
+          document.getElementById("capital").textContent = pais.capital?.join(", ") || "N/A";
+          document.getElementById("poblacion").textContent = pais.population.toLocaleString();
+          document.getElementById("area").textContent = `${pais.area.toLocaleString()} km²`;
+          document.getElementById("region").textContent = pais.region;
+          document.getElementById("idiomas").textContent = Object.values(pais.languages || {}).join(", ") || "N/A";
+          document.getElementById("monedas").textContent = Object.values(pais.currencies || {})
+            .map((c) => `${c.name} (${c.symbol})`)
+            .join(", ") || "N/A";
+
+          informacionPais.classList.remove("hidden");
+        }
+      });
+    </script>
+  </body>
+</html>
